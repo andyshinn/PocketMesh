@@ -59,7 +59,11 @@ public final class LocationService: NSObject, CLLocationManagerDelegate {
 
     /// Whether location services are authorized for use
     public var isAuthorized: Bool {
+        #if os(iOS)
         authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
+        #else
+        authorizationStatus == .authorizedAlways || authorizationStatus == .authorized
+        #endif
     }
 
     /// Whether permission has been determined (not .notDetermined)

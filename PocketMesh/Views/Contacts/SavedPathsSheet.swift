@@ -112,7 +112,9 @@ struct SavedPathsSheet: View {
                     }
             }
         }
+        #if os(iOS)
         .listStyle(.insetGrouped)
+        #endif
         .overlay {
             if viewModel.isLoading {
                 ProgressView()

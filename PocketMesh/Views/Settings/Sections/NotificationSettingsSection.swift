@@ -27,12 +27,14 @@ struct NotificationSettingsSection: View {
                     Label(L10n.Settings.Notifications.disabled, systemImage: "bell.slash")
                         .foregroundStyle(.secondary)
 
+                    #if canImport(UIKit)
                     Button(L10n.Settings.Notifications.openSettings) {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             openURL(url)
                         }
                     }
                     .font(.subheadline)
+                    #endif
                 }
 
             default:

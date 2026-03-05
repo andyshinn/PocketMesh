@@ -2,8 +2,8 @@ import MapKit
 import PocketMeshServices
 import SwiftUI
 
-/// UIViewRepresentable for line of sight map with custom overlays and interactions
-struct LOSMKMapView: UIViewRepresentable {
+/// Cross-platform representable for line of sight map with custom overlays and interactions
+struct LOSMKMapView {
     let repeaters: [ContactDTO]
     let pointA: SelectedPoint?
     let pointB: SelectedPoint?
@@ -15,17 +15,18 @@ struct LOSMKMapView: UIViewRepresentable {
     @Binding var cameraRegion: MKCoordinateRegion?
     let cameraRegionVersion: Int
 
-    /// Closure-wrapped to defer computation to updateUIView, avoiding SwiftUI observation overhead
+    /// Closure-wrapped to defer computation to _updateView, avoiding SwiftUI observation overhead
     let selectionState: () -> [UUID: LOSRepeaterSelectionInfo]
     let onRepeaterTap: (ContactDTO) -> Void
     let onMapTap: (CLLocationCoordinate2D) -> Void
 
-    func makeUIView(context: Context) -> MKMapView {
-        let mapView = context.coordinator.mapView
-        mapView.delegate = context.coordinator
+    @MainActor func _createView(coordinator: Coordinator) -> MKMapView {
+        let mapView = coordinator.mapView
+        mapView.delegate = coordinator
         mapView.showsUserLocation = true
         mapView.showsCompass = true
 
+        #if canImport(UIKit)
         let scaleView = MKScaleView(mapView: mapView)
         scaleView.translatesAutoresizingMaskIntoConstraints = false
         scaleView.scaleVisibility = .adaptive
@@ -34,6 +35,7 @@ struct LOSMKMapView: UIViewRepresentable {
             scaleView.leadingAnchor.constraint(equalTo: mapView.leadingAnchor, constant: 16),
             scaleView.bottomAnchor.constraint(equalTo: mapView.safeAreaLayoutGuide.bottomAnchor, constant: -8),
         ])
+        #endif
 
         mapView.register(
             LOSRepeaterPinView.self,
@@ -53,19 +55,26 @@ struct LOSMKMapView: UIViewRepresentable {
         )
 
         // Map tap gesture for drop pin / relocation
+        #if canImport(UIKit)
         let tapGesture = UITapGestureRecognizer(
-            target: context.coordinator,
+            target: coordinator,
             action: #selector(Coordinator.handleMapTap(_:))
         )
-        tapGesture.delegate = context.coordinator
+        tapGesture.delegate = coordinator
         mapView.addGestureRecognizer(tapGesture)
+        #else
+        let tapGesture = NSClickGestureRecognizer(
+            target: coordinator,
+            action: #selector(Coordinator.handleMapTap(_:))
+        )
+        tapGesture.delegate = coordinator
+        mapView.addGestureRecognizer(tapGesture)
+        #endif
 
         return mapView
     }
 
-    func updateUIView(_ mapView: MKMapView, context: Context) {
-        let coordinator = context.coordinator
-
+    @MainActor func _updateView(_ mapView: MKMapView, coordinator: Coordinator) {
         coordinator.isUpdatingFromSwiftUI = true
         defer { coordinator.isUpdatingFromSwiftUI = false }
 
@@ -120,17 +129,17 @@ struct LOSMKMapView: UIViewRepresentable {
         }
     }
 
-    func makeCoordinator() -> Coordinator {
+    @MainActor func makeCoordinator() -> Coordinator {
         Coordinator(setCameraRegion: { cameraRegion = $0 })
     }
 
-    static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) {
+    @MainActor static func _dismantleView(coordinator: Coordinator) {
         coordinator.pendingRegionTask?.cancel()
     }
 
     // MARK: - Repeater Annotation Updates
 
-    private func updateRepeaterAnnotations(
+    @MainActor private func updateRepeaterAnnotations(
         in mapView: MKMapView,
         coordinator: Coordinator,
         selectionState: [UUID: LOSRepeaterSelectionInfo]
@@ -166,7 +175,7 @@ struct LOSMKMapView: UIViewRepresentable {
 
     // MARK: - Point Annotation Updates
 
-    private func updatePointAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
+    @MainActor private func updatePointAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
         let existingPoints = mapView.annotations.compactMap { $0 as? LOSPointAnnotation }
 
         // Point A (only if dropped pin, not contact)
@@ -213,7 +222,7 @@ struct LOSMKMapView: UIViewRepresentable {
 
     // MARK: - Repeater Target Annotation Updates
 
-    private func updateRepeaterTargetAnnotation(in mapView: MKMapView, coordinator: Coordinator) {
+    @MainActor private func updateRepeaterTargetAnnotation(in mapView: MKMapView, coordinator: Coordinator) {
         let existing = mapView.annotations.compactMap { $0 as? LOSRepeaterTargetAnnotation }.first
 
         if let repeaterTarget {
@@ -233,7 +242,7 @@ struct LOSMKMapView: UIViewRepresentable {
 
     // MARK: - Path Overlay Updates
 
-    private func updatePathOverlays(in mapView: MKMapView, coordinator: Coordinator) {
+    @MainActor private func updatePathOverlays(in mapView: MKMapView, coordinator: Coordinator) {
         // Build desired path segments
         var newOverlays: [LOSPathOverlay] = []
 
@@ -277,7 +286,7 @@ struct LOSMKMapView: UIViewRepresentable {
 
     // MARK: - Update Visible Pin Views
 
-    private func updateVisiblePinViews(in mapView: MKMapView, coordinator: Coordinator, selectionState: [UUID: LOSRepeaterSelectionInfo]) {
+    @MainActor private func updateVisiblePinViews(in mapView: MKMapView, coordinator: Coordinator, selectionState: [UUID: LOSRepeaterSelectionInfo]) {
         for annotation in mapView.annotations {
             if let repeaterAnnotation = annotation as? LOSRepeaterAnnotation,
                let view = mapView.view(for: repeaterAnnotation) as? LOSRepeaterPinView {
@@ -304,7 +313,7 @@ struct LOSMKMapView: UIViewRepresentable {
 
     // MARK: - Coordinate Comparison
 
-    private func coordinatesEqual(_ lhs: CLLocationCoordinate2D?, _ rhs: CLLocationCoordinate2D?) -> Bool {
+    @MainActor private func coordinatesEqual(_ lhs: CLLocationCoordinate2D?, _ rhs: CLLocationCoordinate2D?) -> Bool {
         switch (lhs, rhs) {
         case (nil, nil): return true
         case (nil, _), (_, nil): return false
@@ -315,7 +324,7 @@ struct LOSMKMapView: UIViewRepresentable {
     // MARK: - Coordinator
 
     @MainActor
-    class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
+    class Coordinator: NSObject, MKMapViewDelegate {
         var setCameraRegion: (MKCoordinateRegion?) -> Void
 
         var selectionState: [UUID: LOSRepeaterSelectionInfo] = [:]
@@ -347,19 +356,19 @@ struct LOSMKMapView: UIViewRepresentable {
 
         // MARK: - Map Tap Handling
 
+        #if canImport(UIKit)
         @objc func handleMapTap(_ gesture: UITapGestureRecognizer) {
             let point = gesture.location(in: mapView)
             let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
             onMapTap?(coordinate)
         }
-
-        // Avoid intercepting annotation view taps
-        func gestureRecognizer(
-            _ gestureRecognizer: UIGestureRecognizer,
-            shouldReceive touch: UITouch
-        ) -> Bool {
-            !(touch.view is MKAnnotationView)
+        #else
+        @objc func handleMapTap(_ gesture: NSClickGestureRecognizer) {
+            let point = gesture.location(in: mapView)
+            let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
+            onMapTap?(coordinate)
         }
+        #endif
 
         // MARK: - MKMapViewDelegate
 
@@ -438,13 +447,22 @@ struct LOSMKMapView: UIViewRepresentable {
             return MKOverlayRenderer(overlay: overlay)
         }
 
+        #if canImport(UIKit)
         func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
             mapView.deselectAnnotation(annotation, animated: false)
-
             if let cluster = annotation as? MKClusterAnnotation {
                 mapView.showAnnotations(cluster.memberAnnotations, animated: true)
             }
         }
+        #else
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard let annotation = view.annotation else { return }
+            mapView.deselectAnnotation(annotation, animated: false)
+            if let cluster = annotation as? MKClusterAnnotation {
+                mapView.showAnnotations(cluster.memberAnnotations, animated: true)
+            }
+        }
+        #endif
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             guard !isUpdatingFromSwiftUI else { return }
@@ -495,3 +513,31 @@ struct LOSMKMapView: UIViewRepresentable {
         }
     }
 }
+
+// MARK: - Platform Representable Conformance
+
+#if canImport(UIKit)
+extension LOSMKMapView: UIViewRepresentable {
+    func makeUIView(context: Context) -> MKMapView { _createView(coordinator: context.coordinator) }
+    func updateUIView(_ mapView: MKMapView, context: Context) { _updateView(mapView, coordinator: context.coordinator) }
+    static func dismantleUIView(_ mapView: MKMapView, coordinator: Coordinator) { _dismantleView(coordinator: coordinator) }
+}
+#else
+extension LOSMKMapView: NSViewRepresentable {
+    func makeNSView(context: Context) -> MKMapView { _createView(coordinator: context.coordinator) }
+    func updateNSView(_ mapView: MKMapView, context: Context) { _updateView(mapView, coordinator: context.coordinator) }
+    static func dismantleNSView(_ mapView: MKMapView, coordinator: Coordinator) { _dismantleView(coordinator: coordinator) }
+}
+#endif
+
+// MARK: - Coordinator Gesture Recognizer Delegate
+
+#if canImport(UIKit)
+extension LOSMKMapView.Coordinator: UIGestureRecognizerDelegate {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        !(touch.view is MKAnnotationView)
+    }
+}
+#else
+extension LOSMKMapView.Coordinator: NSGestureRecognizerDelegate {}
+#endif

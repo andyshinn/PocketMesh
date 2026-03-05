@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import UIKit
 import SwiftUI
 
@@ -740,3 +741,50 @@ struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: U
         var setIsDividerVisible: ((Bool) -> Void)?
     }
 }
+
+#else
+import SwiftUI
+
+/// macOS fallback: SwiftUI ScrollView-based chat view
+/// Provides the same interface as the iOS UITableView wrapper
+struct ChatTableView<Item: Identifiable & Hashable & Sendable, Content: View>: View where Item.ID: Sendable {
+    let items: [Item]
+    let cellContent: (Item) -> Content
+    @Binding var isAtBottom: Bool
+    @Binding var unreadCount: Int
+    @Binding var scrollToBottomRequest: Int
+    @Binding var scrollToMentionRequest: Int
+    var isUnseenMention: ((Item) -> Bool)?
+    var onMentionBecameVisible: ((Item.ID) -> Void)?
+    var mentionTargetID: Item.ID?
+    @Binding var scrollToDividerRequest: Int
+    var dividerItemID: Item.ID?
+    @Binding var isDividerVisible: Bool
+    var onNearTop: (() -> Void)?
+    var isLoadingOlderMessages: Bool = false
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(items) { item in
+                        cellContent(item)
+                            .id(item.id)
+                    }
+                }
+            }
+            .defaultScrollAnchor(.bottom)
+            .onChange(of: scrollToBottomRequest) {
+                if let lastID = items.last?.id {
+                    withAnimation {
+                        proxy.scrollTo(lastID, anchor: .bottom)
+                    }
+                }
+            }
+        }
+        .onAppear {
+            isAtBottom = true
+        }
+    }
+}
+#endif

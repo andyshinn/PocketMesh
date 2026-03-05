@@ -33,6 +33,25 @@ extension ConnectionManager {
         }
     }
 
+    /// Connects to a device discovered by BLE scanning (macOS).
+    /// Unlike ``pairNewDevice()``, this skips AccessorySetupKit and connects directly.
+    /// - Parameter deviceID: The Bluetooth peripheral UUID from the scanner
+    public func connectToScannedDevice(deviceID: UUID) async throws {
+        logger.info("Connecting to scanned device: \(deviceID.uuidString.prefix(8))")
+
+        connectionIntent = .wantsConnection()
+        persistIntent()
+        connectionState = .connecting
+
+        do {
+            try await connectAfterPairing(deviceID: deviceID)
+        } catch {
+            logger.error("Connection to scanned device failed: \(error.localizedDescription)")
+            connectionState = .disconnected
+            throw error
+        }
+    }
+
     /// Removes a device that failed to connect after pairing.
     /// Call this when user explicitly chooses to remove and retry.
     /// - Parameter deviceID: The device ID from `PairingError.connectionFailed`
@@ -111,14 +130,18 @@ extension ConnectionManager {
             throw ConnectionError.notConnected
         }
 
+        #if os(iOS)
         guard let accessory = accessorySetupKit.accessory(for: deviceID) else {
             throw ConnectionError.deviceNotFound
         }
+        #endif
 
         logger.info("Forgetting device: \(deviceID)")
 
-        // Remove from paired accessories first (most important operation)
+        // Remove from paired accessories first (most important operation on iOS)
+        #if os(iOS)
         try await accessorySetupKit.removeAccessory(accessory)
+        #endif
 
         // Disconnect
         await disconnect(reason: .forgetDevice)

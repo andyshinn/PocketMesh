@@ -1,6 +1,10 @@
 // PocketMesh/Views/Tools/RxLogView.swift
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import PocketMeshServices
 import MeshCore
 
@@ -76,7 +80,9 @@ struct RxLogView: View {
                     .textCase(nil)
             }
         }
+        #if os(iOS)
         .listStyle(.insetGrouped)
+        #endif
     }
 
     private func expandedBinding(for hash: String) -> Binding<Bool> {
@@ -534,7 +540,7 @@ private struct RawPayloadSection: View {
 
 private struct GlassEffectModifier: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content.glassEffect()
         } else {
             content.background(.ultraThinMaterial, in: .capsule)
@@ -544,7 +550,7 @@ private struct GlassEffectModifier: ViewModifier {
 
 private struct GlassContainerModifier: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             GlassEffectContainer { content }
         } else {
             content

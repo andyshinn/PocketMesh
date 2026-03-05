@@ -2,7 +2,11 @@ import Foundation
 import MeshCore
 import OSLog
 import PocketMeshServices
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Service for exporting debug logs and app state for troubleshooting
 enum LogExportService {
@@ -67,8 +71,13 @@ enum LogExportService {
     private static func generateHeader() -> String {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        #if canImport(UIKit)
         let deviceModel = UIDevice.current.model
         let systemVersion = UIDevice.current.systemVersion
+        #else
+        let deviceModel = Host.current().localizedName ?? "Mac"
+        let systemVersion = ProcessInfo.processInfo.operatingSystemVersionString
+        #endif
 
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]

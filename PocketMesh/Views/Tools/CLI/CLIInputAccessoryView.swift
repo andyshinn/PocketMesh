@@ -85,7 +85,7 @@ struct CLIInputAccessoryView: View {
             }
         }
         .background {
-            if #available(iOS 26.0, *) {
+            if #available(iOS 26.0, macOS 26.0, *) {
                 Rectangle().fill(.clear).glassEffect()
             } else {
                 Rectangle().fill(.ultraThinMaterial)

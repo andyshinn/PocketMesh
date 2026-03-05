@@ -47,7 +47,7 @@ struct PermissionsView: View {
                         icon: "location.fill",
                         title: L10n.Onboarding.Permissions.Location.title,
                         description: L10n.Onboarding.Permissions.Location.description,
-                        isGranted: coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways,
+                        isGranted: locationGranted,
                         isDenied: coordinator.locationAuthorization == .denied,
                         action: {
                             if coordinator.locationAuthorization == .denied {
@@ -104,9 +104,16 @@ struct PermissionsView: View {
         }
     }
 
+    private var locationGranted: Bool {
+        #if os(iOS)
+        coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways
+        #else
+        coordinator.locationAuthorization == .authorizedAlways
+        #endif
+    }
+
     private var allPermissionsGranted: Bool {
         let notificationsGranted = coordinator.notificationAuthorization == .authorized
-        let locationGranted = coordinator.locationAuthorization == .authorizedWhenInUse || coordinator.locationAuthorization == .authorizedAlways
         return notificationsGranted && locationGranted
     }
 }

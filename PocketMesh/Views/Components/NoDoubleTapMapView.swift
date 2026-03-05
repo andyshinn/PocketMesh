@@ -1,5 +1,6 @@
 import MapKit
 
+#if canImport(UIKit)
 /// MKMapView subclass that disables double-tap-to-zoom and one-handed zoom gestures.
 /// Directly disables VariableDelayTap and OneHandedZoom gesture recognizers on MapKit's
 /// content view rather than using `require(toFail:)` blockers, which avoids a ~1s cascading
@@ -29,3 +30,7 @@ final class NoDoubleTapMapView: MKMapView {
         }
     }
 }
+#else
+/// macOS: No double-tap gesture issue; use plain MKMapView.
+typealias NoDoubleTapMapView = MKMapView
+#endif

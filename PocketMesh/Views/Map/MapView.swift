@@ -46,7 +46,9 @@ struct MapView: View {
                     )
                     .presentationDetents([.large])
                 }
+                #if os(iOS)
                 .liquidGlassToolbarBackground()
+                #endif
         }
     }
 
@@ -129,9 +131,15 @@ struct MapView: View {
                     // Show static snapshot while sheet is presented to prevent memory growth
                     // MKMapView clustering causes unbounded memory growth during keyboard layout cycles
                     // Must ignore safe area to match MKMapView's positioning (UIView fills entire area)
+                    #if canImport(UIKit)
                     Image(uiImage: snapshot)
                         .resizable()
                         .ignoresSafeArea()
+                    #else
+                    Image(nsImage: snapshot)
+                        .resizable()
+                        .ignoresSafeArea()
+                    #endif
                 }
             }
             .overlay {
@@ -278,7 +286,9 @@ struct MapView: View {
         let options = MKMapSnapshotter.Options()
         options.camera = params.camera
         options.size = params.size
+        #if canImport(UIKit)
         options.scale = UIScreen.main.scale
+        #endif
         options.mapType = viewModel.mapStyleSelection.mkMapType
         options.showsBuildings = true
 

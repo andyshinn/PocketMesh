@@ -75,18 +75,27 @@ struct DiscoveryView: View {
                 )
             }
         }
+        #if os(iOS)
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: L10n.Contacts.Contacts.Discovery.searchPrompt
         )
+        #else
+        .searchable(
+            text: $searchText,
+            prompt: L10n.Contacts.Contacts.Discovery.searchPrompt
+        )
+        #endif
         .onChange(of: searchText) { _, newValue in
+            #if canImport(UIKit)
             if !newValue.isEmpty && UIAccessibility.isVoiceOverRunning {
                 UIAccessibility.post(
                     notification: .announcement,
                     argument: L10n.Contacts.Contacts.Discovery.searchingAllTypes
                 )
             }
+            #endif
         }
         .task {
             viewModel.configure(appState: appState)
@@ -132,12 +141,14 @@ struct DiscoveryView: View {
         guard let deviceID = appState.connectedDevice?.id else { return }
         await viewModel.clearAllDiscoveredNodes(deviceID: deviceID)
 
+        #if canImport(UIKit)
         if UIAccessibility.isVoiceOverRunning {
             UIAccessibility.post(
                 notification: .announcement,
                 argument: L10n.Contacts.Contacts.Discovery.clearedAllNodes
             )
         }
+        #endif
     }
 }
 

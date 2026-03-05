@@ -75,7 +75,7 @@ struct LocationPickerView: View {
                         .font(.caption.monospacedDigit())
                         .padding()
                         .background {
-                            if #available(iOS 26.0, *) {
+                            if #available(iOS 26.0, macOS 26.0, *) {
                                 Color.clear
                             } else {
                                 RoundedRectangle(cornerRadius: 8)
@@ -86,7 +86,7 @@ struct LocationPickerView: View {
                     }
 
                     Group {
-                        if #available(iOS 26.0, *) {
+                        if #available(iOS 26.0, macOS 26.0, *) {
                             GlassEffectContainer {
                                 makeButtonContent()
                             }
@@ -238,7 +238,7 @@ extension LocationPickerView {
 
 private struct CoordinateGlassModifier: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             content.glassEffect(.regular, in: .rect(cornerRadius: 8))
         } else {
             content
@@ -250,7 +250,7 @@ private struct LocationPickerGlassButtonModifier: ViewModifier {
     let isProminent: Bool
 
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             if isProminent {
                 content
                     .buttonStyle(.glassProminent)

@@ -1,5 +1,9 @@
 import MapKit
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import PocketMeshServices
 
 /// Custom pin view for repeaters in line of sight map with selection state and clustering
@@ -44,19 +48,34 @@ final class LOSRepeaterPinView: MKAnnotationView {
         // Selection ring (behind circle)
         selectionRing.translatesAutoresizingMaskIntoConstraints = false
         selectionRing.backgroundColor = .clear
+        #if canImport(UIKit)
         selectionRing.layer.borderWidth = 3
         selectionRing.layer.cornerRadius = ringSize / 2
+        #else
+        selectionRing.wantsLayer = true
+        selectionRing.layer?.borderWidth = 3
+        selectionRing.layer?.cornerRadius = ringSize / 2
+        #endif
         selectionRing.isHidden = true
         addSubview(selectionRing)
 
         // Circle
         circleView.translatesAutoresizingMaskIntoConstraints = false
         circleView.backgroundColor = .systemCyan
+        #if canImport(UIKit)
         circleView.layer.cornerRadius = circleSize / 2
         circleView.layer.shadowColor = UIColor.black.cgColor
         circleView.layer.shadowOpacity = 0.3
         circleView.layer.shadowRadius = 2
         circleView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        #else
+        circleView.wantsLayer = true
+        circleView.layer?.cornerRadius = circleSize / 2
+        circleView.layer?.shadowColor = UIColor.black.cgColor
+        circleView.layer?.shadowOpacity = 0.3
+        circleView.layer?.shadowRadius = 2
+        circleView.layer?.shadowOffset = CGSize(width: 0, height: 2)
+        #endif
         addSubview(circleView)
 
         // Icon
@@ -70,7 +89,12 @@ final class LOSRepeaterPinView: MKAnnotationView {
         triangleImageView.translatesAutoresizingMaskIntoConstraints = false
         triangleImageView.contentMode = .scaleAspectFit
         triangleImageView.image = UIImage(systemName: "triangle.fill")
+        #if canImport(UIKit)
         triangleImageView.transform = CGAffineTransform(rotationAngle: .pi)
+        #else
+        triangleImageView.wantsLayer = true
+        triangleImageView.layer?.setAffineTransform(CGAffineTransform(rotationAngle: .pi))
+        #endif
         triangleImageView.tintColor = .systemCyan
         addSubview(triangleImageView)
 
@@ -127,7 +151,11 @@ final class LOSRepeaterPinView: MKAnnotationView {
         // Selection ring color: blue for A, green for B
         if let selectedAs {
             selectionRing.isHidden = false
+            #if canImport(UIKit)
             selectionRing.layer.borderColor = (selectedAs == .pointA ? UIColor.systemBlue : UIColor.systemGreen).cgColor
+            #else
+            selectionRing.layer?.borderColor = (selectedAs == .pointA ? UIColor.systemBlue : UIColor.systemGreen).cgColor
+            #endif
             showPointBadge(selectedAs == .pointA ? "A" : "B", color: selectedAs == .pointA ? .systemBlue : .systemGreen)
         } else {
             selectionRing.isHidden = true
@@ -144,6 +172,7 @@ final class LOSRepeaterPinView: MKAnnotationView {
         }
 
         // Accessibility
+        #if canImport(UIKit)
         isAccessibilityElement = true
         if let repeaterAnnotation = annotation as? LOSRepeaterAnnotation {
             if isSelected {
@@ -155,6 +184,13 @@ final class LOSRepeaterPinView: MKAnnotationView {
             }
             accessibilityHint = L10n.Tools.Tools.LineOfSight.RepeaterPin.accessibilityHint
         }
+        #else
+        _isAccessibilityElement = true
+        if let repeaterAnnotation = annotation as? LOSRepeaterAnnotation {
+            _accessibilityLabel = repeaterAnnotation.repeater.displayName
+            _accessibilityHint = L10n.Tools.Tools.LineOfSight.RepeaterPin.accessibilityHint
+        }
+        #endif
     }
 
     // MARK: - Point Badge
@@ -171,8 +207,14 @@ final class LOSRepeaterPinView: MKAnnotationView {
             badge.adjustsFontForContentSizeCategory = true
             badge.textColor = .white
             badge.textAlignment = .center
+            #if canImport(UIKit)
             badge.layer.cornerRadius = 9
             badge.layer.masksToBounds = true
+            #else
+            badge.wantsLayer = true
+            badge.layer?.cornerRadius = 9
+            badge.layer?.masksToBounds = true
+            #endif
             addSubview(badge)
 
             NSLayoutConstraint.activate([
@@ -186,7 +228,11 @@ final class LOSRepeaterPinView: MKAnnotationView {
         }
 
         pointBadge?.text = text
+        #if canImport(UIKit)
         pointBadge?.backgroundColor = color
+        #else
+        pointBadge?.layer?.backgroundColor = color.cgColor
+        #endif
         pointBadge?.isHidden = false
     }
 
@@ -198,6 +244,7 @@ final class LOSRepeaterPinView: MKAnnotationView {
 
     private func showNameLabel(_ name: String) {
         if nameLabelContainer == nil {
+            #if canImport(UIKit)
             let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
             blur.translatesAutoresizingMaskIntoConstraints = false
             blur.layer.cornerRadius = 8
@@ -226,6 +273,39 @@ final class LOSRepeaterPinView: MKAnnotationView {
                 blur.centerXAnchor.constraint(equalTo: circleView.centerXAnchor),
                 blur.bottomAnchor.constraint(equalTo: circleView.topAnchor, constant: -4),
             ])
+            #else
+            let blur = NSVisualEffectView()
+            blur.translatesAutoresizingMaskIntoConstraints = false
+            blur.material = .popover
+            blur.state = .active
+            blur.wantsLayer = true
+            blur.layer?.cornerRadius = 8
+            blur.clipsToBounds = true
+
+            let label = UILabel()
+            label.translatesAutoresizingMaskIntoConstraints = false
+            let baseFont = UIFont.systemFont(
+                ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize,
+                weight: .medium
+            )
+            label.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: baseFont)
+            label.adjustsFontForContentSizeCategory = true
+            label.textColor = .labelColor
+            label.textAlignment = .center
+            blur.addSubview(label)
+
+            addSubview(blur)
+
+            NSLayoutConstraint.activate([
+                label.topAnchor.constraint(equalTo: blur.topAnchor, constant: 4),
+                label.bottomAnchor.constraint(equalTo: blur.bottomAnchor, constant: -4),
+                label.leadingAnchor.constraint(equalTo: blur.leadingAnchor, constant: 8),
+                label.trailingAnchor.constraint(equalTo: blur.trailingAnchor, constant: -8),
+
+                blur.centerXAnchor.constraint(equalTo: circleView.centerXAnchor),
+                blur.bottomAnchor.constraint(equalTo: circleView.topAnchor, constant: -4),
+            ])
+            #endif
 
             nameLabelContainer = blur
             nameLabel = label
@@ -248,7 +328,11 @@ final class LOSRepeaterPinView: MKAnnotationView {
         hidePointBadge()
         hideNameLabel()
         alpha = 1.0
+        #if canImport(UIKit)
         accessibilityLabel = nil
+        #else
+        _accessibilityLabel = nil
+        #endif
         clusteringIdentifier = Self.clusteringID
         displayPriority = .defaultLow
     }

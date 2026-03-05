@@ -102,10 +102,16 @@ struct MessageActionsSheet: View {
                 }
             }
         }
+        #if canImport(UIKit)
         .presentationDetents(
             (UIDevice.current.userInterfaceIdiom == .pad || dynamicTypeSize.isAccessibilitySize)
                 ? [.large] : [.medium, .large]
         )
+        #else
+        .presentationDetents(
+            dynamicTypeSize.isAccessibilitySize ? [.large] : [.medium, .large]
+        )
+        #endif
         .presentationContentInteraction(.scrolls)
         .presentationDragIndicator(.visible)
         .presentationBackground(Color(.systemBackground))

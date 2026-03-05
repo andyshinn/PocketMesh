@@ -1,5 +1,9 @@
 import MapKit
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Renderer for PathLineOverlay that draws dashed or solid colored lines
 /// Note: Since PathLineOverlay is immutable, create new overlays when signal quality changes

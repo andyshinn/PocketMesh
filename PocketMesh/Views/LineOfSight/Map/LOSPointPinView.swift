@@ -1,5 +1,9 @@
 import MapKit
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Pin view for dropped-pin A/B markers on the line of sight map
 final class LOSPointPinView: MKAnnotationView {
@@ -28,11 +32,20 @@ final class LOSPointPinView: MKAnnotationView {
         let size: CGFloat = 32
 
         circleView.translatesAutoresizingMaskIntoConstraints = false
+        #if canImport(UIKit)
         circleView.layer.cornerRadius = size / 2
         circleView.layer.shadowColor = UIColor.black.cgColor
         circleView.layer.shadowOpacity = 0.3
         circleView.layer.shadowRadius = 2
         circleView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        #else
+        circleView.wantsLayer = true
+        circleView.layer?.cornerRadius = size / 2
+        circleView.layer?.shadowColor = UIColor.black.cgColor
+        circleView.layer?.shadowOpacity = 0.3
+        circleView.layer?.shadowRadius = 2
+        circleView.layer?.shadowOffset = CGSize(width: 0, height: 2)
+        #endif
         addSubview(circleView)
 
         labelView.translatesAutoresizingMaskIntoConstraints = false
@@ -69,12 +82,20 @@ final class LOSPointPinView: MKAnnotationView {
         labelView.text = label
         alpha = opacity
 
+        #if canImport(UIKit)
         isAccessibilityElement = true
         accessibilityTraits = .image
         accessibilityLabel = label == "A"
             ? L10n.Tools.Tools.LineOfSight.pointA
             : L10n.Tools.Tools.LineOfSight.pointB
         accessibilityHint = L10n.Tools.Tools.LineOfSight.PointPin.accessibilityHint
+        #else
+        _isAccessibilityElement = true
+        _accessibilityLabel = label == "A"
+            ? L10n.Tools.Tools.LineOfSight.pointA
+            : L10n.Tools.Tools.LineOfSight.pointB
+        _accessibilityHint = L10n.Tools.Tools.LineOfSight.PointPin.accessibilityHint
+        #endif
     }
 
     // MARK: - Reuse
@@ -83,6 +104,10 @@ final class LOSPointPinView: MKAnnotationView {
         super.prepareForReuse()
         alpha = 1.0
         labelView.text = nil
+        #if canImport(UIKit)
         accessibilityLabel = nil
+        #else
+        _accessibilityLabel = nil
+        #endif
     }
 }

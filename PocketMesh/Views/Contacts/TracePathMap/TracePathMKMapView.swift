@@ -2,8 +2,8 @@ import MapKit
 import SwiftUI
 import PocketMeshServices
 
-/// UIViewRepresentable for trace path map with custom overlays and interactions
-struct TracePathMKMapView: UIViewRepresentable {
+/// Cross-platform representable for trace path map with custom overlays and interactions
+struct TracePathMKMapView {
     let repeaters: [ContactDTO]
     let lineOverlays: [PathLineOverlay]
     let badgeAnnotations: [StatsBadgeAnnotation]
@@ -17,9 +17,9 @@ struct TracePathMKMapView: UIViewRepresentable {
     let pathState: () -> [UUID: TracePathMapViewModel.RepeaterPathInfo]
     let onRepeaterTap: (ContactDTO) -> Void
 
-    func makeUIView(context: Context) -> MKMapView {
-        let mapView = context.coordinator.mapView
-        mapView.delegate = context.coordinator
+    @MainActor func _createView(coordinator: Coordinator) -> MKMapView {
+        let mapView = coordinator.mapView
+        mapView.delegate = coordinator
         mapView.showsUserLocation = true
 
         // Register annotation views
@@ -39,9 +39,7 @@ struct TracePathMKMapView: UIViewRepresentable {
         return mapView
     }
 
-    func updateUIView(_ mapView: MKMapView, context: Context) {
-        let coordinator = context.coordinator
-
+    @MainActor func _updateView(_ mapView: MKMapView, coordinator: Coordinator) {
         coordinator.isUpdatingFromSwiftUI = true
         defer { coordinator.isUpdatingFromSwiftUI = false }
 
@@ -73,12 +71,13 @@ struct TracePathMKMapView: UIViewRepresentable {
         }
     }
 
-    func makeCoordinator() -> Coordinator {
+    @MainActor func makeCoordinator() -> Coordinator {
         Coordinator(setCameraRegion: { cameraRegion = $0 })
     }
 
     // MARK: - Annotation Updates
 
+    @MainActor
     private func updateRepeaterAnnotations(
         in mapView: MKMapView,
         coordinator: Coordinator,
@@ -131,6 +130,7 @@ struct TracePathMKMapView: UIViewRepresentable {
         }
     }
 
+    @MainActor
     private func updateOverlays(in mapView: MKMapView, coordinator: Coordinator) {
         let newIdentities = Set(lineOverlays.map { ObjectIdentifier($0) })
 
@@ -142,6 +142,7 @@ struct TracePathMKMapView: UIViewRepresentable {
         mapView.addOverlays(lineOverlays)
     }
 
+    @MainActor
     private func updateBadgeAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
         let newIdentities = Set(badgeAnnotations.map { ObjectIdentifier($0) })
 
@@ -258,15 +259,24 @@ struct TracePathMKMapView: UIViewRepresentable {
             return MKOverlayRenderer(overlay: overlay)
         }
 
+        #if canImport(UIKit)
         func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
             mapView.deselectAnnotation(annotation, animated: false)
 
             if let cluster = annotation as? MKClusterAnnotation {
                 mapView.showAnnotations(cluster.memberAnnotations, animated: true)
             }
-            // Repeater taps are handled by UITapGestureRecognizer on the pin view
-            // to bypass MapKit's ~300ms selection delay
         }
+        #else
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard let annotation = view.annotation else { return }
+            mapView.deselectAnnotation(annotation, animated: false)
+
+            if let cluster = annotation as? MKClusterAnnotation {
+                mapView.showAnnotations(cluster.memberAnnotations, animated: true)
+            }
+        }
+        #endif
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             guard !isUpdatingFromSwiftUI else { return }
@@ -297,6 +307,18 @@ struct TracePathMKMapView: UIViewRepresentable {
         }
     }
 }
+
+#if canImport(UIKit)
+extension TracePathMKMapView: UIViewRepresentable {
+    func makeUIView(context: Context) -> MKMapView { _createView(coordinator: context.coordinator) }
+    func updateUIView(_ mapView: MKMapView, context: Context) { _updateView(mapView, coordinator: context.coordinator) }
+}
+#else
+extension TracePathMKMapView: NSViewRepresentable {
+    func makeNSView(context: Context) -> MKMapView { _createView(coordinator: context.coordinator) }
+    func updateNSView(_ mapView: MKMapView, context: Context) { _updateView(mapView, coordinator: context.coordinator) }
+}
+#endif
 
 // MARK: - Repeater Annotation
 

@@ -59,7 +59,11 @@ struct JoinHashtagFromMessageView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            #if canImport(UIKit)
             .background(Color(.systemGroupedBackground))
+            #else
+            .background(Color(nsColor: .windowBackgroundColor))
+            #endif
             .navigationTitle(L10n.Chats.Chats.JoinFromMessage.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

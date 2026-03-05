@@ -1,6 +1,10 @@
 import Foundation
 import ImageIO
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Detects image URLs and resolves hosting service URLs to direct image links
 enum ImageURLDetector {

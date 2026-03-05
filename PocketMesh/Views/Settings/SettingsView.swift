@@ -17,6 +17,9 @@ struct SettingsView: View {
                     showingDeviceSelection: $showingDeviceSelection,
                     demoModeManager: demoModeManager
                 )
+                #if os(macOS)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 480)
+                #endif
             } detail: {
                 ContentUnavailableView(L10n.Settings.selectSetting, systemImage: "gear")
             }
@@ -79,6 +82,7 @@ private struct SettingsListContent: View {
                     TintedLabel(L10n.Settings.LiveActivity.title, systemImage: "platter.filled.bottom.and.arrow.down.iphone")
                 }
 
+                #if canImport(UIKit)
                 Button {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
                         openURL(url)
@@ -90,6 +94,7 @@ private struct SettingsListContent: View {
                         detail: currentLanguageDisplayName
                     )
                 }
+                #endif
             } header: {
                 Text(L10n.Settings.AppSettings.header)
             }

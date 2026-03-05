@@ -38,9 +38,11 @@ struct BlockedChannelSendersView: View {
         }
         .navigationTitle(L10n.Settings.Blocking.ChannelSenders.title)
         .toolbar {
+            #if os(iOS)
             if !blockedSenders.isEmpty {
                 EditButton()
             }
+            #endif
         }
         .task {
             await loadBlockedSenders()

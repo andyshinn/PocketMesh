@@ -1,5 +1,9 @@
 import MapKit
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import PocketMeshServices
 
 /// Custom pin view for repeaters in trace path map with selection state
@@ -44,20 +48,36 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         // Selection ring (behind circle)
         selectionRing.translatesAutoresizingMaskIntoConstraints = false
         selectionRing.backgroundColor = .clear
+        #if canImport(UIKit)
         selectionRing.layer.borderColor = UIColor.white.cgColor
         selectionRing.layer.borderWidth = 2
         selectionRing.layer.cornerRadius = ringSize / 2
+        #else
+        selectionRing.wantsLayer = true
+        selectionRing.layer?.borderColor = UIColor.white.cgColor
+        selectionRing.layer?.borderWidth = 2
+        selectionRing.layer?.cornerRadius = ringSize / 2
+        #endif
         selectionRing.isHidden = true
         addSubview(selectionRing)
 
         // Circle
         circleView.translatesAutoresizingMaskIntoConstraints = false
         circleView.backgroundColor = .systemCyan
+        #if canImport(UIKit)
         circleView.layer.cornerRadius = circleSize / 2
         circleView.layer.shadowColor = UIColor.black.cgColor
         circleView.layer.shadowOpacity = 0.3
         circleView.layer.shadowRadius = 2
         circleView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        #else
+        circleView.wantsLayer = true
+        circleView.layer?.cornerRadius = circleSize / 2
+        circleView.layer?.shadowColor = UIColor.black.cgColor
+        circleView.layer?.shadowOpacity = 0.3
+        circleView.layer?.shadowRadius = 2
+        circleView.layer?.shadowOffset = CGSize(width: 0, height: 2)
+        #endif
         addSubview(circleView)
 
         // Icon
@@ -71,7 +91,13 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         triangleImageView.translatesAutoresizingMaskIntoConstraints = false
         triangleImageView.contentMode = .scaleAspectFit
         triangleImageView.image = UIImage(systemName: "triangle.fill")
+        #if canImport(UIKit)
         triangleImageView.transform = CGAffineTransform(rotationAngle: .pi)
+        #else
+        triangleImageView.wantsLayer = true
+        triangleImageView.layer?.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        triangleImageView.layer?.setAffineTransform(CGAffineTransform(rotationAngle: .pi))
+        #endif
         triangleImageView.tintColor = .systemCyan
         addSubview(triangleImageView)
 
@@ -153,6 +179,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         }
 
         // Accessibility
+        #if canImport(UIKit)
         isAccessibilityElement = true
         if inPath {
             if isLastHop {
@@ -169,6 +196,21 @@ final class TracePathRepeaterPinView: MKAnnotationView {
             accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.addHint
             accessibilityTraits = .button
         }
+        #else
+        _isAccessibilityElement = true
+        if inPath {
+            if isLastHop {
+                _accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Pin.inPathLabel(repeater.displayName, hopIndex ?? 0)
+                _accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.removableHint
+            } else {
+                _accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Pin.inPathLabel(repeater.displayName, hopIndex ?? 0)
+                _accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.notRemovableHint
+            }
+        } else {
+            _accessibilityLabel = L10n.Contacts.Contacts.Trace.Map.Pin.availableLabel(repeater.displayName)
+            _accessibilityHint = L10n.Contacts.Contacts.Trace.Map.Pin.addHint
+        }
+        #endif
     }
 
     // MARK: - Number Badge
@@ -181,11 +223,23 @@ final class TracePathRepeaterPinView: MKAnnotationView {
             let baseFont = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize, weight: .bold)
             badge.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: baseFont)
             badge.adjustsFontForContentSizeCategory = true
-            badge.textColor = .black
-            badge.textAlignment = .center
+            badge.textColor = UIColor.black
+            badge.textAlignment = NSTextAlignment.center
+            #if canImport(UIKit)
             badge.backgroundColor = .white
+            #else
+            badge.drawsBackground = true
+            badge.wantsLayer = true
+            badge.layer?.backgroundColor = NSColor.white.cgColor
+            #endif
+            #if canImport(UIKit)
             badge.layer.cornerRadius = 9
             badge.layer.masksToBounds = true
+            #else
+            badge.wantsLayer = true
+            badge.layer?.cornerRadius = 9
+            badge.layer?.masksToBounds = true
+            #endif
             addSubview(badge)
 
             NSLayoutConstraint.activate([
@@ -210,6 +264,7 @@ final class TracePathRepeaterPinView: MKAnnotationView {
 
     private func showNameLabel(_ name: String) {
         if nameLabelContainer == nil {
+            #if canImport(UIKit)
             let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
             blur.translatesAutoresizingMaskIntoConstraints = false
             blur.layer.cornerRadius = 8
@@ -218,13 +273,30 @@ final class TracePathRepeaterPinView: MKAnnotationView {
 
             let label = UILabel()
             label.translatesAutoresizingMaskIntoConstraints = false
-            // Dynamic Type with caption2 style
             let baseFont = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize, weight: .medium)
             label.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: baseFont)
             label.adjustsFontForContentSizeCategory = true
             label.textColor = .label
             label.textAlignment = .center
             blur.contentView.addSubview(label)
+            #else
+            let blur = NSVisualEffectView()
+            blur.translatesAutoresizingMaskIntoConstraints = false
+            blur.material = .popover
+            blur.state = .active
+            blur.wantsLayer = true
+            blur.layer?.cornerRadius = 8
+            blur.layer?.masksToBounds = true
+            addSubview(blur)
+
+            let label = UILabel()
+            label.translatesAutoresizingMaskIntoConstraints = false
+            let baseFont = UIFont.systemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize, weight: .medium)
+            label.font = UIFontMetrics(forTextStyle: .caption2).scaledFont(for: baseFont)
+            label.textColor = NSColor.labelColor
+            label.textAlignment = NSTextAlignment.center
+            blur.addSubview(label)
+            #endif
 
             // Internal + position constraints (all set once at creation time)
             NSLayoutConstraint.activate([
@@ -256,8 +328,13 @@ final class TracePathRepeaterPinView: MKAnnotationView {
         selectionRing.isHidden = true
         hideNumberBadge()
         hideNameLabel()
+        #if canImport(UIKit)
         accessibilityLabel = nil
         accessibilityHint = nil
+        #else
+        _accessibilityLabel = nil
+        _accessibilityHint = nil
+        #endif
         clusteringIdentifier = Self.clusteringID
         displayPriority = .defaultLow
     }

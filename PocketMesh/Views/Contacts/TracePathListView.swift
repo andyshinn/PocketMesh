@@ -1,5 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import PocketMeshServices
 
 /// List-based view for building trace paths
@@ -62,7 +66,9 @@ struct TracePathListView: View {
                 .listRowInsets(EdgeInsets())
                 .id("bottom")
         }
+        #if os(iOS)
         .environment(\.editMode, .constant(.active))
+        #endif
     }
 
     // MARK: - Code Input Section
@@ -71,7 +77,9 @@ struct TracePathListView: View {
         Section {
             HStack {
                 TextField(L10n.Contacts.Contacts.Trace.List.codePlaceholder, text: $codeInput)
+                    #if os(iOS)
                     .textInputAutocapitalization(.characters)
+                    #endif
                     .autocorrectionDisabled()
                     .onSubmit {
                         processCodeInput()
@@ -106,8 +114,16 @@ struct TracePathListView: View {
     }
 
     private func pasteAndProcess() {
-        guard let pasteboardString = UIPasteboard.general.string,
-              !pasteboardString.isEmpty else { return }
+        let pasteboardString: String?
+        #if canImport(UIKit)
+        pasteboardString = UIPasteboard.general.string
+        #elseif canImport(AppKit)
+        pasteboardString = NSPasteboard.general.string(forType: .string)
+        #else
+        pasteboardString = nil
+        #endif
+
+        guard let pasteboardString, !pasteboardString.isEmpty else { return }
 
         codeInput = pasteboardString
         let result = viewModel.addRepeatersFromCodes(codeInput)

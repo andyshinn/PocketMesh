@@ -2,7 +2,11 @@ import Foundation
 import LinkPresentation
 import os
 import PocketMeshServices
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import UniformTypeIdentifiers
 
 /// Metadata extracted from a URL for link previews
@@ -147,6 +151,7 @@ final class LinkPreviewService: Sendable {
 
     /// Compresses image data to fit within a maximum size
     private func compressImage(data: Data, maxSize: Int) -> Data? {
+        #if canImport(UIKit)
         guard let image = UIImage(data: data) else { return data }
 
         // Start with high quality and reduce until within size
@@ -175,6 +180,22 @@ final class LinkPreviewService: Sendable {
 
         logger.debug("Compressed image from \(data.count) to \(compressed?.count ?? 0) bytes")
         return compressed
+        #else
+        guard let image = NSImage(data: data),
+              let tiffData = image.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData) else { return data }
+
+        var quality: CGFloat = 0.8
+        var compressed = bitmap.representation(using: .jpeg, properties: [.compressionFactor: quality])
+
+        while let compressedData = compressed, compressedData.count > maxSize, quality > 0.1 {
+            quality -= 0.1
+            compressed = bitmap.representation(using: .jpeg, properties: [.compressionFactor: quality])
+        }
+
+        logger.debug("Compressed image from \(data.count) to \(compressed?.count ?? 0) bytes")
+        return compressed
+        #endif
     }
 
     /// Fetches link preview for a message and persists to SwiftData

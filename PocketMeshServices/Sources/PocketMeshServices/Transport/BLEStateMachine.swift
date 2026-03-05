@@ -194,10 +194,17 @@ public actor BLEStateMachine: BLEStateMachineProtocol {
         delegateHandler.stateMachine = self
 
         logger.info("[BLE] Initializing central manager, instance: \(instanceID), \(processContext)")
+        #if os(iOS)
         let options: [String: Any] = [
             CBCentralManagerOptionRestoreIdentifierKey: stateRestorationID,
             CBCentralManagerOptionShowPowerAlertKey: true
         ]
+        #else
+        // macOS does not support state restoration for CoreBluetooth
+        let options: [String: Any] = [
+            CBCentralManagerOptionShowPowerAlertKey: true
+        ]
+        #endif
         self.centralManager = CBCentralManager(
             delegate: delegateHandler,
             queue: centralQueue,

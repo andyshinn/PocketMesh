@@ -66,7 +66,9 @@ struct NodesSettingsSection: View {
             .pickerStyle(.menu)
             .onChange(of: autoAddMode) { _, newValue in
                 if newValue == .selectedTypes {
+                    #if canImport(UIKit)
                     UIAccessibility.post(notification: .screenChanged, argument: nil)
+                    #endif
                 }
             }
 

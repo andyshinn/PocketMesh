@@ -50,7 +50,9 @@ struct ChatsStackLayout<RootContent: View>: View {
                         }
                     }
                 }
+                #if os(iOS)
                 .toolbarVisibility(appState.navigation.tabBarVisibility, for: .tabBar)
+                #endif
         }
     }
 }

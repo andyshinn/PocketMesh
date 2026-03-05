@@ -49,6 +49,7 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
         Task { await sm.handleCentralManagerDidUpdateState(central.state) }
     }
 
+    #if os(iOS)
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
         guard let sm = stateMachine else { return }
         // Extract peripheral synchronously before crossing actor boundary
@@ -58,6 +59,7 @@ final class BLEDelegateHandler: NSObject, CBCentralManagerDelegate, CBPeripheral
         }
         Task { await sm.handleWillRestoreState(peripheral) }
     }
+    #endif
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral,
                         advertisementData: [String: Any], rssi RSSI: NSNumber) {

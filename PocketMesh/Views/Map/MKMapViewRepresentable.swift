@@ -5,8 +5,8 @@ import PocketMeshServices
 
 private let logger = Logger(subsystem: "com.pocketmesh", category: "MapRepresentable")
 
-/// UIViewRepresentable wrapper for MKMapView with custom contact annotations
-struct MKMapViewRepresentable: UIViewRepresentable {
+/// Representable wrapper for MKMapView with custom contact annotations
+struct MKMapViewRepresentable {
     let contacts: [ContactDTO]
     let mapType: MKMapType
     let showLabels: Bool
@@ -21,10 +21,10 @@ struct MKMapViewRepresentable: UIViewRepresentable {
     /// Called once with a closure that returns snapshot parameters from the actual MKMapView (bypasses async binding)
     var onSnapshotParamsGetter: ((@escaping () -> (camera: MKMapCamera, size: CGSize)?) -> Void)?
 
-    func makeUIView(context: Context) -> MKMapView {
-        let mapView = context.coordinator.mapView
+    @MainActor func _createView(coordinator: Coordinator) -> MKMapView {
+        let mapView = coordinator.mapView
 
-        mapView.delegate = context.coordinator
+        mapView.delegate = coordinator
         mapView.showsUserLocation = showsUserLocation
 
         // Register annotation views
@@ -47,8 +47,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         return mapView
     }
 
-    func updateUIView(_ mapView: MKMapView, context: Context) {
-        let coordinator = context.coordinator
+    @MainActor func _updateView(_ mapView: MKMapView, coordinator: Coordinator) {
 
         // Update binding setters each render cycle
         coordinator.setSelectedContact = { selectedContact = $0 }
@@ -101,13 +100,13 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         }
     }
 
-    func makeCoordinator() -> Coordinator {
+    @MainActor func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
     // MARK: - Annotation Management
 
-    private func updateAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
+    @MainActor private func updateAnnotations(in mapView: MKMapView, coordinator: Coordinator) {
         let currentAnnotations = mapView.annotations.compactMap { $0 as? ContactAnnotation }
         let currentIDs = Set(currentAnnotations.map { $0.contact.id })
         let newIDs = Set(contacts.map { $0.id })
@@ -139,7 +138,7 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         }
     }
 
-    private func updateSelection(in mapView: MKMapView, coordinator: Coordinator) {
+    @MainActor private func updateSelection(in mapView: MKMapView, coordinator: Coordinator) {
         let currentlySelectedAnnotation = mapView.selectedAnnotations.first as? ContactAnnotation
 
         if let selectedContact {
@@ -205,8 +204,8 @@ struct MKMapViewRepresentable: UIViewRepresentable {
 
         // MARK: - Cluster Tap Handler
 
-        @objc func clusterTapped(_ gesture: UITapGestureRecognizer) {
-            guard let clusterView = gesture.view as? MKAnnotationView,
+        private func handleClusterTap(view: Any?) {
+            guard let clusterView = (view as? MKAnnotationView),
                   let cluster = clusterView.annotation as? MKClusterAnnotation else {
                 return
             }
@@ -218,6 +217,16 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             logger.debug("Cluster: gesture tapped, calling showAnnotations for \(cluster.memberAnnotations.count) members")
             mapView.showAnnotations(cluster.memberAnnotations, animated: true)
         }
+
+        #if canImport(UIKit)
+        @objc func clusterTapped(_ gesture: UITapGestureRecognizer) {
+            handleClusterTap(view: gesture.view)
+        }
+        #else
+        @objc func clusterTapped(_ gesture: NSClickGestureRecognizer) {
+            handleClusterTap(view: gesture.view)
+        }
+        #endif
 
         // MARK: - MKMapViewDelegate
 
@@ -242,12 +251,22 @@ struct MKMapViewRepresentable: UIViewRepresentable {
                 view.canShowCallout = false
 
                 // Remove existing tap gestures to avoid duplicates on reuse
+                #if canImport(UIKit)
                 view.gestureRecognizers?.filter { $0 is UITapGestureRecognizer }.forEach {
                     view.removeGestureRecognizer($0)
                 }
+                #else
+                (view.gestureRecognizers as [NSGestureRecognizer]).filter { $0 is NSClickGestureRecognizer }.forEach {
+                    view.removeGestureRecognizer($0)
+                }
+                #endif
 
-                // Add tap gesture for immediate response (bypasses delegate selection delay)
+                // Add tap/click gesture for immediate response (bypasses delegate selection delay)
+                #if canImport(UIKit)
                 let tap = UITapGestureRecognizer(target: self, action: #selector(clusterTapped(_:)))
+                #else
+                let tap = NSClickGestureRecognizer(target: self, action: #selector(clusterTapped(_:)))
+                #endif
                 view.addGestureRecognizer(tap)
 
                 return view
@@ -281,19 +300,14 @@ struct MKMapViewRepresentable: UIViewRepresentable {
             return view
         }
 
-        func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
+        // Common selection handling extracted for cross-platform use
+        private func handleDidSelect(annotation: any MKAnnotation, in mapView: MKMapView) {
             guard !isUpdatingFromSwiftUI else { return }
 
-            // Ignore user location selection
-            if annotation is MKUserLocation {
-                return
-            }
+            if annotation is MKUserLocation { return }
 
-            // Handle cluster selection - zoom to show members
-            // Skip if gesture recognizer already handled this tap (within 500ms)
             if let cluster = annotation as? MKClusterAnnotation {
                 if let tapTime = lastClusterTapTime, Date().timeIntervalSince(tapTime) < 0.5 {
-                    // Gesture already handled this tap, just deselect without zooming again
                     logger.debug("Cluster: didSelect skipped (gesture handled \(Date().timeIntervalSince(tapTime), format: .fixed(precision: 3))s ago)")
                     mapView.deselectAnnotation(cluster, animated: false)
                     return
@@ -309,22 +323,19 @@ struct MKMapViewRepresentable: UIViewRepresentable {
 
             logger.debug("Selection: didSelect for \(contactAnnotation.contact.displayName)")
 
-            // Update name label visibility
             if let view = mapView.view(for: annotation) as? ContactPinView {
                 view.showsNameLabel = false
             }
 
-            // Defer binding update to avoid SwiftUI state mutation during update
             Task { @MainActor in
                 logger.debug("Selection: updating selectedContact binding")
                 self.setSelectedContact?(contactAnnotation.contact)
             }
         }
 
-        func mapView(_ mapView: MKMapView, didDeselect annotation: any MKAnnotation) {
+        private func handleDidDeselect(annotation: any MKAnnotation, in mapView: MKMapView) {
             guard !isUpdatingFromSwiftUI else { return }
 
-            // Update name label visibility
             if let view = mapView.view(for: annotation) as? ContactPinView {
                 view.showsNameLabel = showLabels
             }
@@ -333,6 +344,26 @@ struct MKMapViewRepresentable: UIViewRepresentable {
                 self.setSelectedContact?(nil)
             }
         }
+
+        #if canImport(UIKit)
+        func mapView(_ mapView: MKMapView, didSelect annotation: any MKAnnotation) {
+            handleDidSelect(annotation: annotation, in: mapView)
+        }
+
+        func mapView(_ mapView: MKMapView, didDeselect annotation: any MKAnnotation) {
+            handleDidDeselect(annotation: annotation, in: mapView)
+        }
+        #else
+        func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            guard let annotation = view.annotation else { return }
+            handleDidSelect(annotation: annotation, in: mapView)
+        }
+
+        func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+            guard let annotation = view.annotation else { return }
+            handleDidDeselect(annotation: annotation, in: mapView)
+        }
+        #endif
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
             guard !isUpdatingFromSwiftUI else {
@@ -386,6 +417,20 @@ struct MKMapViewRepresentable: UIViewRepresentable {
         }
     }
 }
+
+// MARK: - Platform Conformance
+
+#if canImport(UIKit)
+extension MKMapViewRepresentable: UIViewRepresentable {
+    func makeUIView(context: Context) -> MKMapView { _createView(coordinator: context.coordinator) }
+    func updateUIView(_ mapView: MKMapView, context: Context) { _updateView(mapView, coordinator: context.coordinator) }
+}
+#else
+extension MKMapViewRepresentable: NSViewRepresentable {
+    func makeNSView(context: Context) -> MKMapView { _createView(coordinator: context.coordinator) }
+    func updateNSView(_ mapView: MKMapView, context: Context) { _updateView(mapView, coordinator: context.coordinator) }
+}
+#endif
 
 // MARK: - MKCoordinateRegion Comparison
 

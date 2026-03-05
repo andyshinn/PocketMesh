@@ -58,6 +58,9 @@ struct ContactsListView: View {
                 NavigationStack {
                     sidebarContent
                 }
+                #if os(macOS)
+                .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 480)
+                #endif
             } detail: {
                 NavigationStack {
                     if showDiscovery {
@@ -129,6 +132,7 @@ struct ContactsListView: View {
     }
 
     private func announceOfflineStateIfNeeded() {
+        #if canImport(UIKit)
         guard UIAccessibility.isVoiceOverRunning,
               appState.connectionState == .disconnected,
               appState.currentDeviceID != nil else { return }
@@ -137,6 +141,17 @@ struct ContactsListView: View {
             notification: .announcement,
             argument: L10n.Contacts.Contacts.List.offlineAnnouncement
         )
+        #else
+        guard NSWorkspace.shared.isVoiceOverEnabled,
+              appState.connectionState == .disconnected,
+              appState.currentDeviceID != nil else { return }
+
+        NSAccessibility.post(
+            element: NSApp.mainWindow as Any,
+            notification: .announcementRequested,
+            userInfo: [.announcement: L10n.Contacts.Contacts.List.offlineAnnouncement]
+        )
+        #endif
     }
 
     private func syncContacts() async {

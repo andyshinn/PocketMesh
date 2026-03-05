@@ -174,7 +174,7 @@ private struct ChatSendButton: View {
 private extension View {
     @ViewBuilder
     func sendButtonStyle() -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             self.buttonStyle(.glass)
         } else {
             self.padding(.vertical, 4)
@@ -183,11 +183,15 @@ private extension View {
 
     @ViewBuilder
     func textFieldBackground() -> some View {
-        if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, macOS 26.0, *) {
             self.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
         } else {
             self
+                #if canImport(UIKit)
                 .background(Color(.systemGray6))
+                #else
+                .background(Color(nsColor: .controlBackgroundColor))
+                #endif
                 .clipShape(.rect(cornerRadius: 20))
         }
     }

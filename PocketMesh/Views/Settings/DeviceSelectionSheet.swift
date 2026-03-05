@@ -53,6 +53,9 @@ struct DeviceSelectionSheet: View {
 
     @State private var devices: [SelectableDevice] = []
     @State private var showingWiFiConnection = false
+    #if os(macOS)
+    @State private var showingBLEScanner = false
+    #endif
     @State private var editingWiFiDevice: SelectableDevice?
     @State private var devicesConnectedElsewhere: Set<UUID> = []
     @State private var deviceRSSI: [UUID: (rssi: Int, lastSeen: Date)] = [:]
@@ -80,6 +83,12 @@ struct DeviceSelectionSheet: View {
                 await loadDevices()
                 await startBLEScanning()
             }
+            #if os(macOS)
+            .frame(minWidth: 400, minHeight: 350)
+            .sheet(isPresented: $showingBLEScanner) {
+                BLEScannerSheet()
+            }
+            #endif
         }
     }
 
@@ -181,12 +190,16 @@ struct DeviceSelectionSheet: View {
     }
 
     private func scanForNewDevice() {
+        #if os(macOS)
+        showingBLEScanner = true
+        #else
         dismiss()
         Task {
             await appState.disconnect(reason: .switchingDevice)
             // Trigger ASK picker flow via AppState
             appState.startDeviceScan()
         }
+        #endif
     }
 
     /// Computes the signal tier with hysteresis to prevent flickering at boundaries.

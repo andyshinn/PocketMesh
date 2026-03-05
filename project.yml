@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.pocketmesh
   deploymentTarget:
     iOS: "18.0"
+    macOS: "15.0"
   xcodeVersion: "26.0"
   generateEmptyDirectories: true
 
@@ -135,6 +136,60 @@ targets:
           INFOPLIST_FILE: PocketMeshWidgets/Info.plist
           PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.app.widgets
 
+  PocketMeshMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: PocketMesh
+        excludes:
+          - "**/*.md"
+      - path: AppIcon.icon
+      - path: Shared
+    dependencies:
+      - package: PocketMeshServices
+      - package: Emojibase
+    preBuildScripts:
+      - name: SwiftGen
+        script: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftgen &> /dev/null; then
+              echo "error: SwiftGen not installed. Install with: brew install swiftgen"
+              exit 1
+          fi
+          swiftgen config run --config "${PROJECT_DIR}/swiftgen.yml"
+        inputFiles:
+          - $(PROJECT_DIR)/swiftgen.yml
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Localizable.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Chats.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Contacts.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Map.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Settings.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Tools.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/Onboarding.strings
+          - $(PROJECT_DIR)/PocketMesh/Resources/Localization/en.lproj/RemoteNodes.strings
+        outputFiles:
+          - $(PROJECT_DIR)/PocketMesh/Resources/Generated/L10n.swift
+        basedOnDependencyAnalysis: false
+    entitlements:
+      path: PocketMeshMac/PocketMeshMac.entitlements
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        MARKETING_VERSION: 0.10.0
+        CURRENT_PROJECT_VERSION: 1
+        VERSIONING_SYSTEM: apple-generic
+        CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION: YES
+        NSBluetoothAlwaysUsageDescription: "PocketMesh uses Bluetooth to connect to MeshCore radios for mesh messaging."
+        NSLocationWhenInUseUsageDescription: "PocketMesh can share your location with contacts on the mesh network."
+        NSCameraUsageDescription: "PocketMesh needs camera access to scan channel QR codes."
+      configs:
+        Debug:
+          INFOPLIST_FILE: PocketMeshMac/Info.plist
+          PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.mac.debug
+        Release:
+          INFOPLIST_FILE: PocketMeshMac/Info.plist
+          PRODUCT_BUNDLE_IDENTIFIER: io.pocketmesh.mac
+
 schemes:
   PocketMesh:
     build:
@@ -148,6 +203,19 @@ schemes:
       config: Debug
       targets:
         - PocketMeshTests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  PocketMeshMac:
+    build:
+      targets:
+        PocketMeshMac: all
+    run:
+      config: Debug
     profile:
       config: Release
     analyze:

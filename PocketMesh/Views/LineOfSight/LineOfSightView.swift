@@ -249,7 +249,9 @@ struct LineOfSightView: View {
                         .accessibilityLabel(L10n.Tools.Tools.LineOfSight.back)
                     }
                 }
+                #if os(iOS)
                 .liquidGlassToolbarBackground()
+                #endif
                 .onDisappear {
                     showAnalysisSheet = false
                 }
@@ -263,7 +265,9 @@ struct LineOfSightView: View {
                 }
         } else {
             base
+                #if os(iOS)
                 .liquidGlassToolbarBackground()
+                #endif
         }
     }
 
@@ -294,7 +298,9 @@ struct LineOfSightView: View {
                 analysisSheetContent
             }
             .scrollDismissesKeyboard(.immediately)
+            #if os(iOS)
             .navigationBarHidden(true)
+            #endif
         }
     }
 
@@ -1320,7 +1326,7 @@ private struct FrequencyInputRow: View {
 extension View {
     @ViewBuilder
     func glassButtonStyle() -> some View {
-        if #available(iOS 26, *) {
+        if #available(iOS 26, macOS 26, *) {
             self.buttonStyle(.glass)
         } else {
             self.buttonStyle(.bordered)
@@ -1329,7 +1335,7 @@ extension View {
 
     @ViewBuilder
     func glassProminentButtonStyle() -> some View {
-        if #available(iOS 26, *) {
+        if #available(iOS 26, macOS 26, *) {
             self.buttonStyle(.glassProminent)
         } else {
             self.buttonStyle(.borderedProminent)

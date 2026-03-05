@@ -82,7 +82,9 @@ struct ToolsView: View {
                             .navigationBarTitleDisplayMode(.inline)
                     }
                 }
+                #if os(iOS)
                 .liquidGlassToolbarBackground()
+                #endif
             }
             .ignoresSafeArea(edges: .top)
             .onChange(of: sidebarPath) { _, _ in

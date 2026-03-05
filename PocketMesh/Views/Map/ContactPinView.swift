@@ -1,6 +1,9 @@
 import MapKit
 import SwiftUI
 import PocketMeshServices
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Custom annotation view displaying a colored circle with icon and pointer triangle
 final class ContactPinView: MKAnnotationView {
@@ -11,10 +14,17 @@ final class ContactPinView: MKAnnotationView {
     private let circleView = UIView()
     private let iconImageView = UIImageView()
     private let triangleImageView = UIImageView()
+    #if canImport(UIKit)
     private var nameLabel: UILabel?
     private var nameLabelContainer: UIView?
     private var nameLabelShadow: UIView?
     private var hostingController: UIHostingController<ContactCalloutContent>?
+    #else
+    private var nameLabel: NSTextField?
+    private var nameLabelContainer: NSVisualEffectView?
+    private var nameLabelShadow: NSView?
+    private var hostingController: NSHostingController<ContactCalloutContent>?
+    #endif
 
     // MARK: - Configuration
 
@@ -45,23 +55,40 @@ final class ContactPinView: MKAnnotationView {
     private func setupViews() {
         // Configure circle
         circleView.translatesAutoresizingMaskIntoConstraints = false
+        #if canImport(UIKit)
         circleView.layer.shadowColor = UIColor.black.cgColor
         circleView.layer.shadowOpacity = 0.3
         circleView.layer.shadowRadius = 2
         circleView.layer.shadowOffset = CGSize(width: 0, height: 2)
+        #else
+        circleView.wantsLayer = true
+        circleView.layer?.shadowColor = NSColor.black.cgColor
+        circleView.layer?.shadowOpacity = 0.3
+        circleView.layer?.shadowRadius = 2
+        circleView.layer?.shadowOffset = CGSize(width: 0, height: 2)
+        #endif
         addSubview(circleView)
 
         // Configure icon
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.contentMode = .scaleAspectFit
+        #if canImport(UIKit)
         iconImageView.tintColor = .white
+        #else
+        iconImageView.contentTintColor = .white
+        #endif
         circleView.addSubview(iconImageView)
 
         // Configure triangle pointer
         triangleImageView.translatesAutoresizingMaskIntoConstraints = false
         triangleImageView.contentMode = .scaleAspectFit
         triangleImageView.image = UIImage(systemName: "triangle.fill")
+        #if canImport(UIKit)
         triangleImageView.transform = CGAffineTransform(rotationAngle: .pi)
+        #else
+        triangleImageView.wantsLayer = true
+        triangleImageView.layer?.setAffineTransform(CGAffineTransform(rotationAngle: .pi))
+        #endif
         addSubview(triangleImageView)
 
         // Initial layout for unselected state
@@ -74,7 +101,11 @@ final class ContactPinView: MKAnnotationView {
         // Set colors based on contact type
         let backgroundColor = pinColor(for: contact)
         circleView.backgroundColor = backgroundColor
+        #if canImport(UIKit)
         triangleImageView.tintColor = backgroundColor
+        #else
+        triangleImageView.contentTintColor = backgroundColor
+        #endif
 
         // Set icon
         let iconName = iconName(for: contact)
@@ -92,6 +123,7 @@ final class ContactPinView: MKAnnotationView {
     override func setSelected(_ selected: Bool, animated: Bool) {
         super.setSelected(selected, animated: animated)
 
+        #if canImport(UIKit)
         if animated {
             UIView.animate(withDuration: 0.2, delay: 0, options: .curveEaseInOut) {
                 self.updateLayout(selected: selected)
@@ -99,6 +131,17 @@ final class ContactPinView: MKAnnotationView {
         } else {
             updateLayout(selected: selected)
         }
+        #else
+        if animated {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.2
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                self.updateLayout(selected: selected)
+            }
+        } else {
+            updateLayout(selected: selected)
+        }
+        #endif
 
         // Update name label visibility since it depends on isSelected state
         updateNameLabel()
@@ -116,6 +159,7 @@ final class ContactPinView: MKAnnotationView {
             onMessage: { [weak self] in self?.onMessage?() }
         )
 
+        #if canImport(UIKit)
         let hosting = UIHostingController(rootView: calloutContent)
         hosting.view.backgroundColor = .clear
 
@@ -125,6 +169,17 @@ final class ContactPinView: MKAnnotationView {
 
         detailCalloutAccessoryView = hosting.view
         hostingController = hosting
+        #else
+        let hosting = NSHostingController(rootView: calloutContent)
+        hosting.view.wantsLayer = true
+        hosting.view.layer?.backgroundColor = .clear
+
+        let size = hosting.view.fittingSize
+        hosting.view.frame = CGRect(origin: .zero, size: size)
+
+        detailCalloutAccessoryView = hosting.view
+        hostingController = hosting
+        #endif
     }
 
     // MARK: - Layout
@@ -164,14 +219,27 @@ final class ContactPinView: MKAnnotationView {
         ])
 
         // Update circle corner radius
+        #if canImport(UIKit)
         circleView.layer.cornerRadius = circleSize / 2
+        #else
+        circleView.layer?.cornerRadius = circleSize / 2
+        #endif
 
         // Update border for selected state
         if selected {
+            #if canImport(UIKit)
             circleView.layer.borderWidth = 3
             circleView.layer.borderColor = UIColor.white.cgColor
+            #else
+            circleView.layer?.borderWidth = 3
+            circleView.layer?.borderColor = NSColor.white.cgColor
+            #endif
         } else {
+            #if canImport(UIKit)
             circleView.layer.borderWidth = 0
+            #else
+            circleView.layer?.borderWidth = 0
+            #endif
         }
 
         // Update frame
@@ -185,6 +253,7 @@ final class ContactPinView: MKAnnotationView {
     private func updateNameLabel() {
         if showsNameLabel && !isSelected {
             if nameLabel == nil {
+                #if canImport(UIKit)
                 // Blur background matching app's material style
                 let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
                 blur.translatesAutoresizingMaskIntoConstraints = false
@@ -227,10 +296,60 @@ final class ContactPinView: MKAnnotationView {
                     label.leadingAnchor.constraint(equalTo: blur.leadingAnchor, constant: 8),
                     label.trailingAnchor.constraint(equalTo: blur.trailingAnchor, constant: -8)
                 ])
+                #else
+                // Blur background matching app's material style
+                let blur = NSVisualEffectView()
+                blur.translatesAutoresizingMaskIntoConstraints = false
+                blur.material = .popover
+                blur.state = .active
+                blur.wantsLayer = true
+                blur.layer?.cornerRadius = 8
+                blur.layer?.masksToBounds = true
+                addSubview(blur)
+
+                // Shadow container (separate from blur since blur clips)
+                let shadow = NSView()
+                shadow.translatesAutoresizingMaskIntoConstraints = false
+                shadow.wantsLayer = true
+                shadow.layer?.backgroundColor = .clear
+                shadow.layer?.shadowColor = NSColor.black.cgColor
+                shadow.layer?.shadowOpacity = 0.3
+                shadow.layer?.shadowRadius = 3
+                shadow.layer?.shadowOffset = CGSize(width: 0, height: 1.5)
+                addSubview(shadow, positioned: .below, relativeTo: blur)
+                nameLabelContainer = blur
+                nameLabelShadow = shadow
+
+                // Label
+                let label = NSTextField(labelWithString: "")
+                label.font = NSFont.systemFont(ofSize: NSFont.systemFontSize(for: .mini), weight: .medium)
+                label.textColor = .labelColor
+                label.alignment = .center
+                label.translatesAutoresizingMaskIntoConstraints = false
+                blur.addSubview(label)
+                nameLabel = label
+
+                NSLayoutConstraint.activate([
+                    blur.centerXAnchor.constraint(equalTo: centerXAnchor),
+                    blur.bottomAnchor.constraint(equalTo: topAnchor, constant: -4),
+                    shadow.topAnchor.constraint(equalTo: blur.topAnchor),
+                    shadow.bottomAnchor.constraint(equalTo: blur.bottomAnchor),
+                    shadow.leadingAnchor.constraint(equalTo: blur.leadingAnchor),
+                    shadow.trailingAnchor.constraint(equalTo: blur.trailingAnchor),
+                    label.topAnchor.constraint(equalTo: blur.topAnchor, constant: 4),
+                    label.bottomAnchor.constraint(equalTo: blur.bottomAnchor, constant: -4),
+                    label.leadingAnchor.constraint(equalTo: blur.leadingAnchor, constant: 8),
+                    label.trailingAnchor.constraint(equalTo: blur.trailingAnchor, constant: -8)
+                ])
+                #endif
             }
 
             if let contactAnnotation = annotation as? ContactAnnotation {
+                #if canImport(UIKit)
                 nameLabel?.text = contactAnnotation.contact.displayName
+                #else
+                nameLabel?.stringValue = contactAnnotation.contact.displayName
+                #endif
             }
             nameLabelContainer?.isHidden = false
             nameLabelShadow?.isHidden = false

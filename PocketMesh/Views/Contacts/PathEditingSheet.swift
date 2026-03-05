@@ -51,7 +51,9 @@ struct PathEditingSheet: View {
                     }
                 }
             }
+            #if os(iOS)
             .environment(\.editMode, .constant(.active))
+            #endif
             .sensoryFeedback(.impact(weight: .light), trigger: dragHapticTrigger)
             .sensoryFeedback(.impact(weight: .light), trigger: addHapticTrigger)
         }

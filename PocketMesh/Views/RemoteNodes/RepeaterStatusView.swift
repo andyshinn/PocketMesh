@@ -39,6 +39,7 @@ struct RepeaterStatusView: View {
                     )
                 }
 
+                #if canImport(UIKit)
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button(L10n.RemoteNodes.RemoteNodes.done) {
@@ -50,6 +51,7 @@ struct RepeaterStatusView: View {
                         )
                     }
                 }
+                #endif
             }
             .task {
                 viewModel.configure(appState: appState)
@@ -464,7 +466,9 @@ private struct NeighborSNRChartView: View {
             }
         }
         .navigationTitle(name)
+        #if os(iOS)
         .liquidGlassToolbarBackground()
+        #endif
         .task {
             let snapshots = await fetchSnapshots()
             allDataPoints = snapshots.compactMap { snapshot in

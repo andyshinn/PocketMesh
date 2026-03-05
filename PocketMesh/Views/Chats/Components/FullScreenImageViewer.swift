@@ -1,5 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import UniformTypeIdentifiers
 
 /// Data needed to present the full-screen image viewer
@@ -53,7 +57,9 @@ struct FullScreenImageViewer: View {
                     .ignoresSafeArea()
                 }
             }
+            #if canImport(UIKit)
             .toolbar(isDragging ? .hidden : .visible, for: .navigationBar)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.Chats.Chats.ImageViewer.close) {
@@ -67,15 +73,21 @@ struct FullScreenImageViewer: View {
                     .tint(.white)
                 }
             }
+            #if canImport(UIKit)
             .toolbarBackground(.hidden, for: .navigationBar)
+            #endif
         }
+        #if canImport(UIKit)
         .accessibilityAction(.magicTap) {
             dismiss()
         }
+        #endif
     }
 }
 
-// MARK: - Zoomable Scroll View
+// MARK: - Zoomable Image View
+
+#if canImport(UIKit)
 
 /// UIScrollView subclass that sizes its imageView on layout
 class ZoomableScrollView: UIScrollView {
@@ -91,8 +103,6 @@ class ZoomableScrollView: UIScrollView {
         }
     }
 }
-
-// MARK: - Zoomable Image View
 
 /// UIViewRepresentable wrapping UIScrollView for native zoom/pan behavior
 struct ZoomableImageView: UIViewRepresentable {
@@ -228,6 +238,28 @@ struct ZoomableImageView: UIViewRepresentable {
         }
     }
 }
+
+#else
+
+/// macOS: Simple image view with magnification gesture
+struct ZoomableImageView: NSViewRepresentable {
+    let image: NSImage
+    var onDragChanged: ((CGFloat) -> Void)?
+    var onDragEnded: ((CGFloat, CGFloat) -> Void)?
+
+    func makeNSView(context: Context) -> NSImageView {
+        let imageView = NSImageView()
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.image = image
+        return imageView
+    }
+
+    func updateNSView(_ imageView: NSImageView, context: Context) {
+        imageView.image = image
+    }
+}
+
+#endif
 
 // MARK: - Shareable Image
 

@@ -1,6 +1,10 @@
 import SwiftUI
 import PocketMeshServices
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Terminal font optimized for mobile screens
 private let terminalFont = Font.caption.monospaced()
@@ -57,7 +61,9 @@ private struct CLIToolContent: View {
         }
         .navigationTitle(L10n.Tools.Tools.cli)
         .navigationBarTitleDisplayMode(.inline)
+        #if os(iOS)
         .liquidGlassToolbarBackground()
+        #endif
         .task(id: appState.servicesVersion) {
             viewModel.configure(
                 repeaterAdminService: appState.services?.repeaterAdminService,

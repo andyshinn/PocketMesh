@@ -39,7 +39,9 @@ struct TelemetryHistoryView: View {
             }
         }
         .navigationTitle(L10n.RemoteNodes.RemoteNodes.Status.telemetry)
+        #if os(iOS)
         .liquidGlassToolbarBackground()
+        #endif
         .task {
             snapshots = await fetchSnapshots()
         }

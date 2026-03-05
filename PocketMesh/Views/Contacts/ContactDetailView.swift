@@ -716,7 +716,11 @@ private struct ContactLocationSection: View {
             }
             .listRowBackground(
                 UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10)
+                    #if canImport(UIKit)
                     .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                    #else
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                    #endif
             )
 
             // Open in Maps

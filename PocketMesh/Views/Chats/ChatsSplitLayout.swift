@@ -10,6 +10,9 @@ struct ChatsSplitLayout<Sidebar: View, Detail: View>: View {
             NavigationStack {
                 sidebar()
             }
+            #if os(macOS)
+            .navigationSplitViewColumnWidth(min: 280, ideal: 320, max: 480)
+            #endif
         } detail: {
             NavigationStack {
                 detail()

@@ -229,11 +229,13 @@ struct ContactsSidebarContent: View {
             AddContactSheet()
         }
         .alert(L10n.Contacts.Contacts.List.locationUnavailable, isPresented: $showLocationDeniedAlert) {
+            #if canImport(UIKit)
             Button(L10n.Contacts.Contacts.List.openSettings) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
             }
+            #endif
             Button(L10n.Contacts.Contacts.Common.cancel, role: .cancel) { }
         } message: {
             Text(L10n.Contacts.Contacts.List.distanceRequiresLocation)

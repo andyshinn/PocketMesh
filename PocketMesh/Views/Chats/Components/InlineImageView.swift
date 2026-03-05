@@ -1,5 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Displays an inline image preview in the chat timeline
 struct InlineImageView: View {
@@ -59,7 +63,11 @@ private struct GIFContentView: View {
     @State private var isPlaying = false
 
     private var staticFrame: UIImage {
+        #if canImport(UIKit)
         image.images?.first ?? image
+        #else
+        image
+        #endif
     }
 
     var body: some View {

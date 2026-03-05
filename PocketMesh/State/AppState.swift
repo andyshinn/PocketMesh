@@ -5,7 +5,11 @@ import PocketMeshServices
 import MeshCore
 import OSLog
 import TipKit
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Simplified app-wide state management.
 /// Composes ConnectionManager for connection lifecycle.

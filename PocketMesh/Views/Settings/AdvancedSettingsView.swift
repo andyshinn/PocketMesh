@@ -69,6 +69,7 @@ struct AdvancedSettingsView: View {
         .navigationTitle(L10n.Settings.AdvancedSettings.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            #if canImport(UIKit)
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
                 Button(L10n.Localizable.Common.done) {
@@ -80,6 +81,7 @@ struct AdvancedSettingsView: View {
                     )
                 }
             }
+            #endif
         }
         .task(id: refreshTaskID) {
             await refreshDeviceSettings()

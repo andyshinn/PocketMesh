@@ -122,12 +122,14 @@ struct ScanContactQRView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal)
 
+            #if canImport(UIKit)
             Button(L10n.Contacts.Contacts.List.openSettings) {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     openURL(url)
                 }
             }
             .buttonStyle(.borderedProminent)
+            #endif
         }
         .padding()
     }

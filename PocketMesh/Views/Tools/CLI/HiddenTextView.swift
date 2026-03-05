@@ -1,4 +1,6 @@
 import SwiftUI
+
+#if canImport(UIKit)
 import UIKit
 
 /// Invisible UITextView that captures keyboard input while allowing visual rendering elsewhere.
@@ -237,3 +239,142 @@ class FocusableTextView: UITextView {
         customDelegate?.moveCursorToEnd(in: self)
     }
 }
+
+#else
+import AppKit
+
+/// macOS NSTextView-based input for CLI tool.
+/// Uses NSViewRepresentable with NSTextView for keyboard capture.
+struct HiddenTextViewFocusable: NSViewRepresentable {
+    @Binding var text: String
+    @Binding var isFocused: Bool
+    @Binding var cursorPosition: Int
+    var onSubmit: () -> Void
+    var onHistoryUp: () -> Void
+    var onHistoryDown: () -> Void
+    var onRightArrowAtEnd: () -> Void
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSTextView.scrollableTextView()
+        guard let textView = scrollView.documentView as? NSTextView else { return scrollView }
+        textView.delegate = context.coordinator
+        textView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        textView.isAutomaticSpellingCorrectionEnabled = false
+        textView.isAutomaticTextCompletionEnabled = false
+        textView.backgroundColor = .clear
+        textView.textColor = .clear
+        textView.insertionPointColor = .clear
+        // Make the scroll view invisible but interactive
+        scrollView.drawsBackground = false
+        scrollView.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        context.coordinator.textView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ scrollView: NSScrollView, context: Context) {
+        guard let textView = scrollView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            textView.string = text
+        }
+
+        let clampedPosition = min(cursorPosition, textView.string.count)
+        if textView.selectedRange().location != clampedPosition {
+            textView.setSelectedRange(NSRange(location: clampedPosition, length: 0))
+        }
+
+        if isFocused && textView.window?.firstResponder !== textView {
+            textView.window?.makeFirstResponder(textView)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(
+            text: $text,
+            isFocused: $isFocused,
+            cursorPosition: $cursorPosition,
+            onSubmit: onSubmit,
+            onHistoryUp: onHistoryUp,
+            onHistoryDown: onHistoryDown,
+            onRightArrowAtEnd: onRightArrowAtEnd
+        )
+    }
+
+    class Coordinator: NSObject, NSTextViewDelegate {
+        @Binding var text: String
+        @Binding var isFocused: Bool
+        @Binding var cursorPosition: Int
+        let onSubmit: () -> Void
+        let onHistoryUp: () -> Void
+        let onHistoryDown: () -> Void
+        let onRightArrowAtEnd: () -> Void
+        weak var textView: NSTextView?
+
+        init(
+            text: Binding<String>,
+            isFocused: Binding<Bool>,
+            cursorPosition: Binding<Int>,
+            onSubmit: @escaping () -> Void,
+            onHistoryUp: @escaping () -> Void,
+            onHistoryDown: @escaping () -> Void,
+            onRightArrowAtEnd: @escaping () -> Void
+        ) {
+            _text = text
+            _isFocused = isFocused
+            _cursorPosition = cursorPosition
+            self.onSubmit = onSubmit
+            self.onHistoryUp = onHistoryUp
+            self.onHistoryDown = onHistoryDown
+            self.onRightArrowAtEnd = onRightArrowAtEnd
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            if textView.string.contains("\n") {
+                textView.string = ""
+                Task { @MainActor in
+                    self.onSubmit()
+                    self.cursorPosition = self.text.count
+                }
+            } else {
+                text = textView.string
+                cursorPosition = textView.selectedRange().location
+            }
+        }
+
+        func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.moveUp(_:)) {
+                onHistoryUp()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveDown(_:)) {
+                onHistoryDown()
+                return true
+            }
+            if commandSelector == #selector(NSResponder.moveRight(_:)) {
+                let cursorAtEnd = textView.selectedRange().location >= textView.string.count
+                if cursorAtEnd {
+                    onRightArrowAtEnd()
+                    return true
+                }
+            }
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                textView.string = ""
+                Task { @MainActor in
+                    self.onSubmit()
+                    self.cursorPosition = self.text.count
+                }
+                return true
+            }
+            return false
+        }
+
+        func textDidBeginEditing(_ notification: Notification) {
+            Task { @MainActor in self.isFocused = true }
+        }
+
+        func textDidEndEditing(_ notification: Notification) {
+            Task { @MainActor in self.isFocused = false }
+        }
+    }
+}
+#endif

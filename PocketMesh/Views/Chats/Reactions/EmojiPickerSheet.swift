@@ -31,11 +31,18 @@ struct EmojiPickerSheet: View {
             }
             .navigationTitle(L10n.Chats.Reactions.title)
             .navigationBarTitleDisplayMode(.inline)
+            #if os(iOS)
             .searchable(
                 text: $viewModel.searchQuery,
                 placement: .navigationBarDrawer(displayMode: .always),
                 prompt: L10n.Chats.Reactions.Emoji.searchPlaceholder
             )
+            #else
+            .searchable(
+                text: $viewModel.searchQuery,
+                prompt: L10n.Chats.Reactions.Emoji.searchPlaceholder
+            )
+            #endif
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.Localizable.Common.cancel) {

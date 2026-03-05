@@ -1,5 +1,9 @@
 import MapKit
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Crosshairs pin view for the simulated repeater target on the line of sight map
 final class LOSRepeaterTargetPinView: MKAnnotationView {
@@ -60,13 +64,23 @@ final class LOSRepeaterTargetPinView: MKAnnotationView {
         crosshairLayer.shadowOpacity = 0.3
         crosshairLayer.shadowRadius = 2
         crosshairLayer.shadowOffset = CGSize(width: 0, height: 2)
+        #if canImport(UIKit)
         layer.addSublayer(crosshairLayer)
+        #else
+        wantsLayer = true
+        layer?.addSublayer(crosshairLayer)
+        #endif
 
         // "R" badge below
         let bg = UIView()
         bg.translatesAutoresizingMaskIntoConstraints = false
         bg.backgroundColor = .systemPurple
+        #if canImport(UIKit)
         bg.layer.cornerRadius = 9
+        #else
+        bg.wantsLayer = true
+        bg.layer?.cornerRadius = 9
+        #endif
         addSubview(bg)
 
         let label = UILabel()
@@ -95,10 +109,16 @@ final class LOSRepeaterTargetPinView: MKAnnotationView {
         badgeLabel = label
         badgeBackground = bg
 
+        #if canImport(UIKit)
         isAccessibilityElement = true
         accessibilityTraits = .image
         accessibilityLabel = L10n.Tools.Tools.LineOfSight.repeater
         accessibilityHint = L10n.Tools.Tools.LineOfSight.RepeaterTarget.accessibilityHint
+        #else
+        _isAccessibilityElement = true
+        _accessibilityLabel = L10n.Tools.Tools.LineOfSight.repeater
+        _accessibilityHint = L10n.Tools.Tools.LineOfSight.RepeaterTarget.accessibilityHint
+        #endif
     }
 
     // MARK: - Configuration

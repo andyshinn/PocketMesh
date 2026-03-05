@@ -54,7 +54,9 @@ struct NodeStatusHistoryView: View {
             }
         }
         .navigationTitle(L10n.RemoteNodes.RemoteNodes.History.title)
+        #if os(iOS)
         .liquidGlassToolbarBackground()
+        #endif
         .task {
             snapshots = await fetchSnapshots()
         }

@@ -218,6 +218,7 @@ struct ChatsView: View {
     }
 
     private func announceOfflineStateIfNeeded() {
+        #if canImport(UIKit)
         guard UIAccessibility.isVoiceOverRunning,
               appState.connectionState == .disconnected,
               appState.currentDeviceID != nil else { return }
@@ -226,6 +227,17 @@ struct ChatsView: View {
             notification: .announcement,
             argument: L10n.Chats.Chats.Accessibility.offlineAnnouncement
         )
+        #else
+        guard NSWorkspace.shared.isVoiceOverEnabled,
+              appState.connectionState == .disconnected,
+              appState.currentDeviceID != nil else { return }
+
+        NSAccessibility.post(
+            element: NSApp.mainWindow as Any,
+            notification: .announcementRequested,
+            userInfo: [.announcement: L10n.Chats.Chats.Accessibility.offlineAnnouncement]
+        )
+        #endif
     }
 
     private func navigate(to route: ChatRoute) {

@@ -7,6 +7,9 @@ struct DeviceScanView: View {
     @Environment(\.appState) private var appState
     @State private var showTroubleshooting = false
     @State private var showingWiFiConnection = false
+    #if os(macOS)
+    @State private var showingBLEScanner = false
+    #endif
     @State private var pairingSuccessTrigger = false
     @State private var demoModeUnlockTrigger = false
     @State private var didInitiatePairing = false
@@ -103,8 +106,22 @@ struct DeviceScanView: View {
                     }
                     .liquidGlassProminentButtonStyle()
                     .disabled(appState.connectionUI.isPairing)
+                    #elseif os(macOS)
+                    // macOS: show BLE scanner sheet instead of AccessorySetupKit picker
+                    Button {
+                        showingBLEScanner = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.circle.fill")
+                            Text(L10n.Onboarding.DeviceScan.addDevice)
+                        }
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                    }
+                    .liquidGlassProminentButtonStyle()
                     #else
-                    // Device build - show demo mode button if enabled, otherwise Add Device
+                    // iOS device build - show demo mode button if enabled, otherwise Add Device
                     if demoModeManager.isEnabled {
                         Button {
                             connectSimulator()
@@ -172,6 +189,16 @@ struct DeviceScanView: View {
         .sheet(isPresented: $showingWiFiConnection) {
             WiFiConnectionSheet()
         }
+        #if os(macOS)
+        .sheet(isPresented: $showingBLEScanner) {
+            BLEScannerSheet()
+        }
+        .onChange(of: appState.connectionState) {
+            if appState.connectionState == .ready {
+                appState.onboarding.onboardingPath.append(.radioPreset)
+            }
+        }
+        #endif
         .alert(L10n.Onboarding.DeviceScan.DemoModeAlert.title, isPresented: $showDemoModeAlert) {
             Button(L10n.Localizable.Common.ok) { }
         } message: {

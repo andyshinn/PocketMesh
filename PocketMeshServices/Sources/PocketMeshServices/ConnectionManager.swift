@@ -245,6 +245,11 @@ public final class ConnectionManager {
     var session: MeshCoreSession?
     let accessorySetupKit = AccessorySetupKitService()
 
+    #if os(macOS)
+    /// BLE scanner for macOS device discovery (replaces AccessorySetupKit)
+    public let bleScanner = BLEScannerService()
+    #endif
+
     /// Shared BLE state machine to manage connection lifecycle.
     /// This prevents state restoration race conditions that cause "API MISUSE" errors.
     let stateMachine: any BLEStateMachineProtocol

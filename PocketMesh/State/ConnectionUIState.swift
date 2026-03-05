@@ -1,6 +1,10 @@
 import Foundation
 import PocketMeshServices
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 /// Manages connection-related UI state: status pills, sync activity, alerts, and pairing state.
 @Observable
@@ -91,9 +95,11 @@ public final class ConnectionUIState {
         syncFailedPillTask?.cancel()
         syncFailedPillVisible = true
 
+        #if canImport(UIKit)
         if UIAccessibility.isVoiceOverRunning {
             announceConnectionState(L10n.Localizable.Accessibility.Connection.syncFailedDisconnecting)
         }
+        #endif
 
         syncFailedPillTask = Task {
             try? await Task.sleep(for: .seconds(7))
@@ -171,9 +177,11 @@ public final class ConnectionUIState {
         lastConnectedDeviceID: UUID?,
         shouldSuppressDisconnectedPill: Bool
     ) {
+        #if canImport(UIKit)
         if UIAccessibility.isVoiceOverRunning {
             announceConnectionState(L10n.Localizable.Accessibility.Connection.deviceConnectionLost)
         }
+        #endif
         syncActivityCount = 0
         currentSyncPhase = nil
         hideReadyToast()
@@ -194,9 +202,11 @@ public final class ConnectionUIState {
     ) async {
         hideDisconnectedPill()
 
+        #if canImport(UIKit)
         if UIAccessibility.isVoiceOverRunning {
             announceConnectionState(L10n.Localizable.Accessibility.Connection.deviceReconnected)
         }
+        #endif
 
         // Sync activity callbacks for syncing pill display
         // These are called for contacts and channels phases, NOT for messages
@@ -244,6 +254,10 @@ public final class ConnectionUIState {
 
     /// Posts a VoiceOver announcement for connection state changes
     func announceConnectionState(_ message: String) {
+        #if canImport(UIKit)
         UIAccessibility.post(notification: .announcement, argument: message)
+        #elseif canImport(AppKit)
+        NSAccessibility.post(element: NSApp as Any, notification: .valueChanged)
+        #endif
     }
 }

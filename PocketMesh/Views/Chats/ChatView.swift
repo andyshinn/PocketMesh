@@ -1,5 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 import PocketMeshServices
 import OSLog
 
@@ -98,9 +102,16 @@ struct ChatView: View {
                 }
             )
         }
+        #if os(iOS)
         .fullScreenCover(item: $imageViewerData) { data in
             FullScreenImageViewer(data: data)
         }
+        #else
+        .sheet(item: $imageViewerData) { data in
+            FullScreenImageViewer(data: data)
+                .frame(minWidth: 600, minHeight: 400)
+        }
+        #endif
         .onAppear {
             eventCursor = appState.messageEventBroadcaster.currentEventSequence
         }

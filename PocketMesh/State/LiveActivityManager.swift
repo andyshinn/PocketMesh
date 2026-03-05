@@ -1,8 +1,10 @@
-@preconcurrency import ActivityKit
 import Foundation
 import MeshCore
 import OSLog
 import PocketMeshServices
+
+#if os(iOS)
+@preconcurrency import ActivityKit
 
 @Observable
 @MainActor
@@ -443,3 +445,31 @@ public final class LiveActivityManager {
         logger.info("Ended Live Activity")
     }
 }
+
+#else
+
+/// macOS stub — Live Activities are not available on macOS.
+@Observable
+@MainActor
+public final class LiveActivityManager {
+
+    var hasActiveActivity: Bool { false }
+    var isEnabled: Bool = false
+
+    init() {}
+
+    func startObservingEnablement() {}
+    func handleConnectionReady(device: DeviceDTO, ocvArray: [Int], unreadCount: Int) async {}
+    func handleConnectionLost() async {}
+    func handleEnterBackground() {}
+    func handleReturnToForeground() {}
+    func handlePacketReceived() async {}
+    func handleBatteryChanged(battery: BatteryInfo) async {}
+    func handleUnreadCountChanged(unreadCount: Int) async {}
+    func setEnabled(_ enabled: Bool) async {}
+    func recoverExistingActivity() async {}
+    func validateActivityState() async {}
+    func endActivity() async {}
+}
+
+#endif

@@ -47,7 +47,11 @@ private struct NotificationLevelPill: View {
                 if isSelected {
                     Color.accentColor
                 } else {
+                    #if canImport(UIKit)
                     Color(uiColor: .tertiarySystemFill)
+                    #else
+                    Color(nsColor: .controlBackgroundColor)
+                    #endif
                 }
             }
             .foregroundStyle(isSelected ? .white : .primary)

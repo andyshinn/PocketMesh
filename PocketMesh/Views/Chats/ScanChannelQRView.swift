@@ -225,9 +225,11 @@ private struct CameraPermissionDeniedContent: View {
                 .padding(.horizontal)
 
             Button(L10n.Chats.Chats.ScanQR.openSettings) {
+                #if canImport(UIKit)
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
+                #endif
             }
             .buttonStyle(.borderedProminent)
         }
@@ -235,6 +237,7 @@ private struct CameraPermissionDeniedContent: View {
     }
 }
 
+#if canImport(UIKit)
 // MARK: - QR Scanner using DataScannerViewController
 
 struct QRDataScannerView: UIViewControllerRepresentable {
@@ -308,6 +311,22 @@ struct QRDataScannerView: UIViewControllerRepresentable {
         }
     }
 }
+#else
+// macOS: QR scanning not available via camera — stub
+struct QRDataScannerView: View {
+    let onScan: (String) -> Void
+    let onPermissionDenied: () -> Void
+
+    static var isSupported: Bool { false }
+    static var isAvailable: Bool { false }
+
+    var body: some View {
+        Text("QR scanning is not available on macOS.\nPaste the channel key manually instead.")
+            .multilineTextAlignment(.center)
+            .padding()
+    }
+}
+#endif
 
 #Preview {
     NavigationStack {
